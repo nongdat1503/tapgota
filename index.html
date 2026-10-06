@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Game Bắn Từ Vựng - Typing Shooter</title>
+    <style>
+        body {
+            margin: 0;
+            background: #0f172a;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #gameCanvas {
+            border: 2px solid #38bdf8;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.3);
+            background: #020617;
+        }
+        .info {
+            position: absolute;
+            top: 20px;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="info">Điểm: <span id="score">0</span></div>
+<canvas id="gameCanvas" width="800" height="600"></canvas>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const scoreEl = document.getElementById('score');
+
+// Danh sách từ vựng tiếng Anh
+const wordList = ['apple', 'banana', 'computer', 'keyboard', 'coding', 'english', 'rocket', 'bullet', 'galaxy', 'future'];
+
+let score = 0;
+let enemies = [];
+let bullets = [];
+let activeTarget = null; // Từ đang được người chơi gõ dở
+
+// Tọa độ súng ở đáy màn hình
+const gun = { x: canvas.width / 2, y: canvas.height - 30 };
+
+// Tạo từ mới rơi xuống
+function spawnEnemy() {
+    const text = wordList[Math.floor(Math.random() * wordList.length)];
+    const x = Math.random() * (canvas.width - 150) + 50;
+    enemies.push({
+        text: text,
+        typedIndex: 0, // Số ký tự đã gõ đúng
+        x: x,
+        y: 0,
+        speed: 0.8 + Math.random() * 0.5
+    });
+}
+
+// Bắn đạn
+function fireBullet(targetX, targetY) {
+    bullets.push({
+        x: gun.x,
+        y: gun.y,
+        targetX: targetX,
+        targetY: targetY,
+        speed: 12
+    });
+}
+
+// Lắng nghe sự kiện gõ phím
+window.addEventListener('keydown', (e) => {
+    const key = e.key.toLowerCase();
+    if (key.length !== 1 || key < 'a' || key > 'z') return;
+
+    // Nếu chưa khoá mục tiêu, tìm từ có chữ cái đầu trùng hợp
+    if (!activeTarget) {
+        for (let enemy of enemies) {
+            if (enemy.text[0] === key) {
+                activeTarget = enemy;
+                break;
+            }
+        }
+    }
+
+    // Nếu đã có mục tiêu, kiểm tra phím tiếp theo
+    if (activeTarget) {
+        if (activeTarget.text[activeTarget.typedIndex] === key) {
+            activeTarget.typedIndex++;
+            fireBullet(activeTarget.x + activeTarget.typedIndex * 10, activeTarget.y);
+
+            // Khi gõ xong toàn bộ từ
+            if (activeTarget.typedIndex === activeTarget.text.length) {
+                score += 10;
+                scoreEl.innerText = score;
+                // Xoá kẻ địch
+                enemies = enemies.filter(e => e !== activeTarget);
+                activeTarget = null;
+            }
+        }
+    }
+});
+
+// Cập nhật trạng thái game
+function update() {
+    // Di chuyển từ xuống dưới
+    for (let enemy of enemies) {
+        enemy.y += enemy.speed;
+        if (enemy.y > canvas.height - 40) {
+            // Thua hoặc trừ điểm khi từ chạm đáy
+            if (enemy === activeTarget) activeTarget = null;
+            enemies = enemies.filter(e => e !== enemy);
+        }
+    }
+
+    // Di chuyển đạn
+    for (let i = bullets.length - 1; i >= 0; i--) {
+        let b = bullets[i];
+        let dx = b.targetX - b.x;
+        let dy = b.targetY - b.y;
+        let dist = Math.hypot(dx, dy);
+
+        if (dist < 10) {
+            bullets.splice(i, 1);
+        } else {
+            b.x += (dx / dist) * b.speed;
+            b.y += (dy / dist) * b.speed;
+        }
+    }
+}
+
+// Vẽ game
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Vẽ súng
+    ctx.fillStyle = '#38bdf8';
+    ctx.beginPath();
+    ctx.arc(gun.x, gun.y, 20, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Vẽ các từ (Kẻ địch)
+    ctx.font = '22px Courier New';
+    for (let enemy of enemies) {
+        let typedPart = enemy.text.substring(0, enemy.typedIndex);
+        let remainingPart = enemy.text.substring(enemy.typedIndex);
+
+        // Chữ đã gõ (màu xanh lá)
+        ctx.fillStyle = '#4ade80';
+        ctx.fillText(typedPart, enemy.x, enemy.y);
+
+        // Chữ chưa gõ (màu trắng)
+        let typedWidth = ctx.measureText(typedPart).width;
+        ctx.fillStyle = enemy === activeTarget ? '#facc15' : '#ffffff';
+        ctx.fillText(remainingPart, enemy.x + typedWidth, enemy.y);
+    }
+
+    // Vẽ đạn
+    ctx.fillStyle = '#f43f5e';
+    for (let b of bullets) {
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+// Loop chính
+function gameLoop() {
+    update();
+    draw();
+    requestAnimationFrame(gameLoop);
+}
+
+// Mỗi 2.5 giây xuất hiện 1 từ mới
+setInterval(spawnEnemy, 2500);
+
+gameLoop();
+</script>
+</body>
+</html>
