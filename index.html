@@ -16,259 +16,275 @@
             height: 100vh;
             overflow: hidden;
         }
+
+        #gameContainer {
+            position: relative;
+            width: 800px;
+            height: 600px;
+        }
+
         #gameCanvas {
             border: 2px solid #38bdf8;
             box-shadow: 0 0 20px rgba(56, 189, 248, 0.3);
             background: #020617;
+            display: block;
         }
+
         .info {
             position: absolute;
-            top: 20px;
-            font-size: 20px;
+            top: 15px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 18px;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        .info button {
+            pointer-events: auto;
+            background: #0284c7;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        .info button:hover {
+            background: #0369a1;
+        }
+
+        /* Menu chọn chủ đề overlay */
+        #menuOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.95);
+            border: 2px solid #38bdf8;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            padding: 20px;
+        }
+
+        #menuOverlay h1 {
+            color: #38bdf8;
+            margin-bottom: 5px;
+            font-size: 32px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        #menuOverlay p {
+            color: #94a3b8;
+            margin-bottom: 25px;
+        }
+
+        .category-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            width: 90%;
+            max-width: 650px;
+        }
+
+        .category-btn {
+            background: #1e293b;
+            color: #e2e8f0;
+            border: 1px solid #475569;
+            padding: 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: bold;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .category-btn:hover {
+            background: #38bdf8;
+            color: #0f172a;
+            border-color: #38bdf8;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
+        }
+
+        .category-btn.all-btn {
+            grid-column: span 3;
+            background: #0284c7;
+            border-color: #38bdf8;
+        }
+
+        .category-btn.all-btn:hover {
+            background: #0369a1;
+            color: white;
         }
     </style>
 </head>
 <body>
 
-<div class="info">Điểm: <span id="score">0</span></div>
-<canvas id="gameCanvas" width="800" height="600"></canvas>
+<div id="gameContainer">
+    <div class="info">
+        <div>Điểm: <span id="score" style="color: #4ade80; font-weight: bold;">0</span></div>
+        <div>Chủ đề: <span id="currentCategory" style="color: #fde047;">Tất cả</span></div>
+        <button id="changeCatBtn" onclick="showMenu()">Đổi chủ đề</button>
+    </div>
+
+    <!-- Màn hình chọn chủ đề -->
+    <div id="menuOverlay">
+        <h1>Bắn Từ Vựng</h1>
+        <p>Chọn một chủ đề để bắt đầu luyện tập</p>
+        <div class="category-grid" id="categoryGrid"></div>
+    </div>
+
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+</div>
 
 <script>
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const scoreEl = document.getElementById('score');
+const categoryEl = document.getElementById('currentCategory');
+const menuOverlay = document.getElementById('menuOverlay');
+const categoryGrid = document.getElementById('categoryGrid');
 
-const wordList = [
-    // --- Thực phẩm & Đồ uống ---
-    { en: 'apple', vi: 'Quả táo' },
-    { en: 'banana', vi: 'Quả chuối' },
-    { en: 'water', vi: 'Nước' },
-    { en: 'food', vi: 'Thức ăn' },
-    { en: 'bread', vi: 'Bánh mì' },
-    { en: 'rice', vi: 'Cơm / Gạo' },
-    { en: 'milk', vi: 'Sữa' },
-    { en: 'tea', vi: 'Trà' },
-    { en: 'coffee', vi: 'Cà phê' },
-    { en: 'meat', vi: 'Thịt' },
-    { en: 'fish', vi: 'Cá' },
-    { en: 'chicken', vi: 'Thịt gà' },
-    { en: 'egg', vi: 'Quả trứng' },
-    { en: 'sugar', vi: 'Đường' },
-    { en: 'salt', vi: 'Muối' },
-    { en: 'fruit', vi: 'Trái cây' },
-    { en: 'vegetable', vi: 'Rau củ' },
-    { en: 'soup', vi: 'Canh / Súp' },
-    { en: 'juice', vi: 'Nước ép' },
-    { en: 'cake', vi: 'Bánh ngọt' },
+// Danh sách từ vựng chia theo chủ đề (Categories)
+const vocabularyCategories = {
+    'Thực phẩm': [
+        { en: 'apple', vi: 'Quả táo' }, { en: 'banana', vi: 'Quả chuối' }, { en: 'water', vi: 'Nước' },
+        { en: 'food', vi: 'Thức ăn' }, { en: 'bread', vi: 'Bánh mì' }, { en: 'rice', vi: 'Cơm / Gạo' },
+        { en: 'milk', vi: 'Sữa' }, { en: 'tea', vi: 'Trà' }, { en: 'coffee', vi: 'Cà phê' },
+        { en: 'meat', vi: 'Thịt' }, { en: 'fish', vi: 'Cá' }, { en: 'chicken', vi: 'Thịt gà' },
+        { en: 'egg', vi: 'Quả trứng' }, { en: 'sugar', vi: 'Đường' }, { en: 'salt', vi: 'Muối' },
+        { en: 'fruit', vi: 'Trái cây' }, { en: 'vegetable', vi: 'Rau củ' }, { en: 'soup', vi: 'Canh / Súp' },
+        { en: 'juice', vi: 'Nước ép' }, { en: 'cake', vi: 'Bánh ngọt' }
+    ],
+    'Công nghệ': [
+        { en: 'computer', vi: 'Máy tính' }, { en: 'keyboard', vi: 'Bàn phím' }, { en: 'mouse', vi: 'Con chuột' },
+        { en: 'screen', vi: 'Màn hình' }, { en: 'phone', vi: 'Điện thoại' }, { en: 'laptop', vi: 'Laptop' },
+        { en: 'internet', vi: 'Mạng internet' }, { en: 'website', vi: 'Trang web' }, { en: 'software', vi: 'Phần mềm' },
+        { en: 'hardware', vi: 'Phần cứng' }, { en: 'network', vi: 'Mạng lưới' }, { en: 'data', vi: 'Dữ liệu' },
+        { en: 'coding', vi: 'Lập trình' }, { en: 'system', vi: 'Hệ thống' }, { en: 'device', vi: 'Thiết bị' },
+        { en: 'camera', vi: 'Máy ảnh' }, { en: 'file', vi: 'Tập tin' }, { en: 'folder', vi: 'Thư mục' },
+        { en: 'message', vi: 'Tin nhắn' }, { en: 'email', vi: 'Thư điện tử' }
+    ],
+    'Gia đình & Con người': [
+        { en: 'family', vi: 'Gia đình' }, { en: 'father', vi: 'Bố / Cha' }, { en: 'mother', vi: 'Mẹ' },
+        { en: 'brother', vi: 'Anh / Em trai' }, { en: 'sister', vi: 'Chị / Em gái' }, { en: 'child', vi: 'Đứa trẻ' },
+        { en: 'children', vi: 'Trẻ em' }, { en: 'parent', vi: 'Phụ huynh' }, { en: 'friend', vi: 'Bạn bè' },
+        { en: 'person', vi: 'Con người' }, { en: 'people', vi: 'Mọi người' }, { en: 'man', vi: 'Đàn ông' },
+        { en: 'woman', vi: 'Phụ nữ' }, { en: 'boy', vi: 'Cậu bé' }, { en: 'girl', vi: 'Cô gái' },
+        { en: 'baby', vi: 'Trẻ sơ sinh' }, { en: 'student', vi: 'Học sinh' }, { en: 'teacher', vi: 'Giáo viên' },
+        { en: 'doctor', vi: 'Bác sĩ' }, { en: 'worker', vi: 'Người lao động' }
+    ],
+    'Thời gian & Vũ trụ': [
+        { en: 'time', vi: 'Thời gian' }, { en: 'today', vi: 'Hôm nay' }, { en: 'yesterday', vi: 'Hôm qua' },
+        { en: 'tomorrow', vi: 'Ngày mai' }, { en: 'morning', vi: 'Buổi sáng' }, { en: 'afternoon', vi: 'Buổi chiều' },
+        { en: 'evening', vi: 'Buổi tối' }, { en: 'night', vi: 'Ban đêm' }, { en: 'week', vi: 'Tuần' },
+        { en: 'month', vi: 'Tháng' }, { en: 'year', vi: 'Năm' }, { en: 'future', vi: 'Tương lai' },
+        { en: 'past', vi: 'Quá khứ' }, { en: 'present', vi: 'Hiện tại' }, { en: 'sun', vi: 'Mặt trời' },
+        { en: 'moon', vi: 'Mặt trăng' }, { en: 'star', vi: 'Ngôi sao' }, { en: 'galaxy', vi: 'Thiên hà' },
+        { en: 'space', vi: 'Vũ trụ' }, { en: 'earth', vi: 'Trái đất' }
+    ],
+    'Đồ vật & Nhà cửa': [
+        { en: 'house', vi: 'Ngôi nhà' }, { en: 'room', vi: 'Căn phòng' }, { en: 'door', vi: 'Cửa ra vào' },
+        { en: 'window', vi: 'Cửa sổ' }, { en: 'table', vi: 'Cái bàn' }, { en: 'chair', vi: 'Cái ghế' },
+        { en: 'bed', vi: 'Cái giường' }, { en: 'book', vi: 'Quyển sách' }, { en: 'pen', vi: 'Cây bút' },
+        { en: 'paper', vi: 'Tờ giấy' }, { en: 'bag', vi: 'Túi xách' }, { en: 'clothes', vi: 'Quần áo' },
+        { en: 'shoes', vi: 'Giày' }, { en: 'clock', vi: 'Đồng hồ' }, { en: 'money', vi: 'Tiền' },
+        { en: 'car', vi: 'Xe hơi' }, { en: 'bicycle', vi: 'Xe đạp' }, { en: 'bus', vi: 'Xe buýt' },
+        { en: 'train', vi: 'Tàu hỏa' }, { en: 'airplane', vi: 'Máy bay' }
+    ],
+    'Động từ thông dụng': [
+        { en: 'have', vi: 'Có' }, { en: 'do', vi: 'Làm' }, { en: 'say', vi: 'Nói' }, { en: 'go', vi: 'Đi' },
+        { en: 'get', vi: 'Nhận được' }, { en: 'make', vi: 'Tạo ra' }, { en: 'know', vi: 'Biết' },
+        { en: 'think', vi: 'Nghĩ' }, { en: 'take', vi: 'Cầm / Lấy' }, { en: 'see', vi: 'Nhìn thấy' },
+        { en: 'come', vi: 'Đến' }, { en: 'want', vi: 'Muốn' }, { en: 'look', vi: 'Nhìn' },
+        { en: 'use', vi: 'Sử dụng' }, { en: 'find', vi: 'Tìm kiếm' }, { en: 'give', vi: 'Cho / Tặng' },
+        { en: 'tell', vi: 'Kể / Nói' }, { en: 'work', vi: 'Làm việc' }, { en: 'call', vi: 'Gọi' },
+        { en: 'play', vi: 'Chơi' }
+    ]
+};
 
-    // --- Công nghệ & Thiết bị ---
-    { en: 'computer', vi: 'Máy tính' },
-    { en: 'keyboard', vi: 'Bàn phím' },
-    { en: 'mouse', vi: 'Con chuột máy tính' },
-    { en: 'screen', vi: 'Màn hình' },
-    { en: 'phone', vi: 'Điện thoại' },
-    { en: 'laptop', vi: 'Máy tính xách tay' },
-    { en: 'internet', vi: 'Mạng internet' },
-    { en: 'website', vi: 'Trang web' },
-    { en: 'software', vi: 'Phần mềm' },
-    { en: 'hardware', vi: 'Phần cứng' },
-    { en: 'network', vi: 'Mạng lưới' },
-    { en: 'data', vi: 'Dữ liệu' },
-    { en: 'coding', vi: 'Lập trình' },
-    { en: 'system', vi: 'Hệ thống' },
-    { en: 'device', vi: 'Thiết bị' },
-    { en: 'camera', vi: 'Máy ảnh / Camera' },
-    { en: 'file', vi: 'Tập tin' },
-    { en: 'folder', vi: 'Thư mục' },
-    { en: 'message', vi: 'Tin nhắn' },
-    { en: 'email', vi: 'Thư điện tử' },
-
-    // --- Gia đình & Con người ---
-    { en: 'family', vi: 'Gia đình' },
-    { en: 'father', vi: 'Bố / Cha' },
-    { en: 'mother', vi: 'Mẹ' },
-    { en: 'brother', vi: 'Anh / Em trai' },
-    { en: 'sister', vi: 'Chị / Em gái' },
-    { en: 'child', vi: 'Đứa trẻ' },
-    { en: 'children', vi: 'Trẻ em' },
-    { en: 'parent', vi: 'Phụ huynh' },
-    { en: 'friend', vi: 'Bạn bè' },
-    { en: 'person', vi: 'Con người' },
-    { en: 'people', vi: 'Mọi người / Con người' },
-    { en: 'man', vi: 'Đàn ông' },
-    { en: 'woman', vi: 'Phụ nữ' },
-    { en: 'boy', vi: 'Cậu bé' },
-    { en: 'girl', vi: 'Cô gái' },
-    { en: 'baby', vi: 'Trẻ sơ sinh' },
-    { en: 'student', vi: 'Học sinh / Sinh viên' },
-    { en: 'teacher', vi: 'Giáo viên' },
-    { en: 'doctor', vi: 'Bác sĩ' },
-    { en: 'worker', vi: 'Công nhân / Người lao động' },
-
-    // --- Thời gian & Vũ trụ ---
-    { en: 'time', vi: 'Thời gian' },
-    { en: 'today', vi: 'Hôm nay' },
-    { en: 'yesterday', vi: 'Hôm qua' },
-    { en: 'tomorrow', vi: 'Ngày mai' },
-    { en: 'morning', vi: 'Buổi sáng' },
-    { en: 'afternoon', vi: 'Buổi chiều' },
-    { en: 'evening', vi: 'Buổi tối' },
-    { en: 'night', vi: 'Ban đêm' },
-    { en: 'week', vi: 'Tuần' },
-    { en: 'month', vi: 'Tháng' },
-    { en: 'year', vi: 'Năm' },
-    { en: 'future', vi: 'Tương lai' },
-    { en: 'past', vi: 'Quá khứ' },
-    { en: 'present', vi: 'Hiện tại' },
-    { en: 'sun', vi: 'Mặt trời' },
-    { en: 'moon', vi: 'Mặt trăng' },
-    { en: 'star', vi: 'Ngôi sao' },
-    { en: 'galaxy', vi: 'Thiên hà' },
-    { en: 'space', vi: 'Không gian / Vũ trụ' },
-    { en: 'earth', vi: 'Trái đất' },
-
-    // --- Đồ vật & Nhà cửa ---
-    { en: 'house', vi: 'Ngôi nhà' },
-    { en: 'room', vi: 'Căn phòng' },
-    { en: 'door', vi: 'Cửa ra vào' },
-    { en: 'window', vi: 'Cửa sổ' },
-    { en: 'table', vi: 'Cái bàn' },
-    { en: 'chair', vi: 'Cái ghế' },
-    { en: 'bed', vi: 'Cái giường' },
-    { en: 'book', vi: 'Quyển sách' },
-    { en: 'pen', vi: 'Cây bút' },
-    { en: 'paper', vi: 'Tờ giấy' },
-    { en: 'bag', vi: 'Cặp / Túi xách' },
-    { en: 'clothes', vi: 'Quần áo' },
-    { en: 'shoes', vi: 'Giày' },
-    { en: 'clock', vi: 'Đồng hồ' },
-    { en: 'money', vi: 'Tiền' },
-    { en: 'car', vi: 'Xe hơi' },
-    { en: 'bicycle', vi: 'Xe đạp' },
-    { en: 'bus', vi: 'Xe buýt' },
-    { en: 'train', vi: 'Tàu hỏa' },
-    { en: 'airplane', vi: 'Máy bay' },
-
-    // --- Địa điểm & Thiên nhiên ---
-    { en: 'city', vi: 'Thành phố' },
-    { en: 'country', vi: 'Đất nước / Quê hương' },
-    { en: 'school', vi: 'Trường học' },
-    { en: 'company', vi: 'Công ty' },
-    { en: 'office', vi: 'Văn phòng' },
-    { en: 'hospital', vi: 'Bệnh viện' },
-    { en: 'park', vi: 'Công viên' },
-    { en: 'street', vi: 'Con đường' },
-    { en: 'road', vi: 'Đường đi' },
-    { en: 'market', vi: 'Chợ' },
-    { en: 'store', vi: 'Cửa hàng' },
-    { en: 'river', vi: 'Dòng sông' },
-    { en: 'sea', vi: 'Biển' },
-    { en: 'ocean', vi: 'Đại dương' },
-    { en: 'mountain', vi: 'Ngọn núi' },
-    { en: 'forest', vi: 'Khu rừng' },
-    { en: 'tree', vi: 'Cây cối' },
-    { en: 'flower', vi: 'Bông hoa' },
-    { en: 'weather', vi: 'Thời tiết' },
-    { en: 'rain', vi: 'Cơn mưa' },
-
-    // --- Động từ thông dụng ---
-    { en: 'be', vi: 'Thì, là, ở' },
-    { en: 'have', vi: 'Có' },
-    { en: 'do', vi: 'Làm' },
-    { en: 'say', vi: 'Nói' },
-    { en: 'go', vi: 'Đi' },
-    { en: 'get', vi: 'Nhận được / Lấy' },
-    { en: 'make', vi: 'Tạo ra / Làm' },
-    { en: 'know', vi: 'Biết' },
-    { en: 'think', vi: 'Nghĩ' },
-    { en: 'take', vi: 'Cầm / Lấy' },
-    { en: 'see', vi: 'Nhìn thấy' },
-    { en: 'come', vi: 'Đến' },
-    { en: 'want', vi: 'Muốn' },
-    { en: 'look', vi: 'Nhìn' },
-    { en: 'use', vi: 'Sử dụng' },
-    { en: 'find', vi: 'Tìm kiếm' },
-    { en: 'give', vi: 'Cho / Tặng' },
-    { en: 'tell', vi: 'Kể / Nói' },
-    { en: 'work', vi: 'Làm việc' },
-    { en: 'call', vi: 'Gọi điện / Gọi' },
-    { en: 'try', vi: 'Thử / Cố gắng' },
-    { en: 'ask', vi: 'Hỏi' },
-    { en: 'need', vi: 'Cần' },
-    { en: 'feel', vi: 'Cảm thấy' },
-    { en: 'become', vi: 'Trở thành' },
-    { en: 'leave', vi: 'Rời đi' },
-    { en: 'put', vi: 'Đặt / Để' },
-    { en: 'mean', vi: 'Có nghĩa là' },
-    { en: 'keep', vi: 'Giữ' },
-    { en: 'let', vi: 'Để cho / Cho phép' },
-    { en: 'begin', vi: 'Bắt đầu' },
-    { en: 'seem', vi: 'Có vẻ như' },
-    { en: 'help', vi: 'Giúp đỡ' },
-    { en: 'talk', vi: 'Nói chuyện' },
-    { en: 'turn', vi: 'Xoay / Rẽ' },
-    { en: 'start', vi: 'Khởi động / Bắt đầu' },
-    { en: 'show', vi: 'Cho xem / Hiển thị' },
-    { en: 'hear', vi: 'Nghe' },
-    { en: 'play', vi: 'Chơi' },
-    { en: 'run', vi: 'Chạy' },
-
-    // --- Tính từ phổ biến ---
-    { en: 'good', vi: 'Tốt' },
-    { en: 'bad', vi: 'Xấu / Tồi tệ' },
-    { en: 'big', vi: 'Lớn / To' },
-    { en: 'small', vi: 'Nhỏ / Bé' },
-    { en: 'happy', vi: 'Vui vẻ' },
-    { en: 'sad', vi: 'Buồn' },
-    { en: 'new', vi: 'Mới' },
-    { en: 'old', vi: 'Cũ / Già' },
-    { en: 'young', vi: 'Trẻ' },
-    { en: 'long', vi: 'Dài' },
-    { en: 'short', vi: 'Ngắn / Thấp' },
-    { en: 'hot', vi: 'Nóng' },
-    { en: 'cold', vi: 'Lạnh' },
-    { en: 'easy', vi: 'Dễ dàng' },
-    { en: 'hard', vi: 'Khó / Cứng' },
-    { en: 'fast', vi: 'Nhanh' },
-    { en: 'slow', vi: 'Chậm' },
-    { en: 'beautiful', vi: 'Đẹp' },
-    { en: 'important', vi: 'Quan trọng' },
-    { en: 'different', vi: 'Khác biệt' },
-
-    // --- Khái niệm & Khác ---
-    { en: 'english', vi: 'Tiếng Anh' },
-    { en: 'language', vi: 'Ngôn ngữ' },
-    { en: 'rocket', vi: 'Tên lửa' },
-    { en: 'bullet', vi: 'Viên đạn' },
-    { en: 'life', vi: 'Cuộc sống' },
-    { en: 'world', vi: 'Thế giới' },
-    { en: 'health', vi: 'Sức khỏe' },
-    { en: 'music', vi: 'Âm nhạc' },
-    { en: 'art', vi: 'Nghệ thuật' },
-    { en: 'history', vi: 'Lịch sử' },
-    { en: 'science', vi: 'Khoa học' },
-    { en: 'business', vi: 'Kinh doanh' },
-    { en: 'power', vi: 'Sức mạnh / Năng lượng' },
-    { en: 'game', vi: 'Trò chơi' },
-    { en: 'idea', vi: 'Ý tưởng' },
-    { en: 'question', vi: 'Câu hỏi' },
-    { en: 'answer', vi: 'Câu trả lời' },
-    { en: 'problem', vi: 'Vấn đề' },
-    { en: 'solution', vi: 'Giải pháp' },
-    { en: 'truth', vi: 'Sự thật' }
-];
-
+let activeWordList = [];
 let score = 0;
 let enemies = [];
 let bullets = [];
-let activeTarget = null; // Từ đang gõ dở
+let activeTarget = null;
+let gameRunning = false;
+let spawnInterval = null;
 
-// Tọa độ súng
 const gun = { x: canvas.width / 2, y: canvas.height - 30 };
+
+// Khởi tạo giao diện Menu chọn chủ đề
+function initMenu() {
+    categoryGrid.innerHTML = '';
+    
+    // Nút chọn tất cả chủ đề
+    const allBtn = document.createElement('button');
+    allBtn.className = 'category-btn all-btn';
+    allBtn.innerText = '🌟 Tất cả chủ đề';
+    allBtn.onclick = () => startGame('Tất cả');
+    categoryGrid.appendChild(allBtn);
+
+    // Tạo nút cho từng chủ đề
+    Object.keys(vocabularyCategories).forEach(catName => {
+        const btn = document.createElement('button');
+        btn.className = 'category-btn';
+        btn.innerText = catName;
+        btn.onclick = () => startGame(catName);
+        categoryGrid.appendChild(btn);
+    });
+}
+
+function showMenu() {
+    gameRunning = false;
+    clearInterval(spawnInterval);
+    enemies = [];
+    bullets = [];
+    activeTarget = null;
+    menuOverlay.style.display = 'flex';
+}
+
+function startGame(category) {
+    categoryEl.innerText = category;
+    
+    // Tạo danh sách từ tương ứng
+    if (category === 'Tất cả') {
+        activeWordList = Object.values(vocabularyCategories).flat();
+    } else {
+        activeWordList = vocabularyCategories[category];
+    }
+
+    // Reset game state
+    score = 0;
+    scoreEl.innerText = score;
+    enemies = [];
+    bullets = [];
+    activeTarget = null;
+    
+    menuOverlay.style.display = 'none';
+    gameRunning = true;
+    
+    clearInterval(spawnInterval);
+    spawnInterval = setInterval(spawnEnemy, 2500);
+}
 
 // Tạo từ mới rơi xuống
 function spawnEnemy() {
-    const wordObj = wordList[Math.floor(Math.random() * wordList.length)];
+    if (!gameRunning || activeWordList.length === 0) return;
+
+    const wordObj = activeWordList[Math.floor(Math.random() * activeWordList.length)];
     const x = Math.random() * (canvas.width - 200) + 50;
     enemies.push({
         text: wordObj.en,
@@ -291,112 +307,4 @@ function fireBullet(targetX, targetY) {
     });
 }
 
-// Xử lý gõ phím
-window.addEventListener('keydown', (e) => {
-    const key = e.key.toLowerCase();
-    if (key.length !== 1 || key < 'a' || key > 'z') return;
-
-    // Tìm mục tiêu nếu chưa chọn
-    if (!activeTarget) {
-        for (let enemy of enemies) {
-            if (enemy.text[0] === key) {
-                activeTarget = enemy;
-                break;
-            }
-        }
-    }
-
-    // Kiểm tra gõ đúng phím tiếp theo
-    if (activeTarget) {
-        if (activeTarget.text[activeTarget.typedIndex] === key) {
-            activeTarget.typedIndex++;
-            fireBullet(activeTarget.x + activeTarget.typedIndex * 12, activeTarget.y);
-
-            // Gõ xong toàn bộ từ
-            if (activeTarget.typedIndex === activeTarget.text.length) {
-                score += 10;
-                scoreEl.innerText = score;
-                enemies = enemies.filter(e => e !== activeTarget);
-                activeTarget = null;
-            }
-        }
-    }
-});
-
-function update() {
-    // Cập nhật vị trí từ rơi
-    for (let enemy of enemies) {
-        enemy.y += enemy.speed;
-        if (enemy.y > canvas.height - 40) {
-            if (enemy === activeTarget) activeTarget = null;
-            enemies = enemies.filter(e => e !== enemy);
-        }
-    }
-
-    // Cập nhật đạn
-    for (let i = bullets.length - 1; i >= 0; i--) {
-        let b = bullets[i];
-        let dx = b.targetX - b.x;
-        let dy = b.targetY - b.y;
-        let dist = Math.hypot(dx, dy);
-
-        if (dist < 10) {
-            bullets.splice(i, 1);
-        } else {
-            b.x += (dx / dist) * b.speed;
-            b.y += (dy / dist) * b.speed;
-        }
-    }
-}
-
-function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Vẽ súng
-    ctx.fillStyle = '#38bdf8';
-    ctx.beginPath();
-    ctx.arc(gun.x, gun.y, 20, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Vẽ từ vựng & Tiếng Việt
-    for (let enemy of enemies) {
-        // 1. Vẽ nghĩa tiếng Việt bên trên (phông nhỏ, mờ hơn)
-        ctx.font = '14px Arial';
-        ctx.fillStyle = enemy === activeTarget ? '#fde047' : '#94a3b8';
-        ctx.fillText(`(${enemy.meaning})`, enemy.x, enemy.y - 22);
-
-        // 2. Vẽ từ tiếng Anh
-        ctx.font = '22px Courier New';
-        let typedPart = enemy.text.substring(0, enemy.typedIndex);
-        let remainingPart = enemy.text.substring(enemy.typedIndex);
-
-        // Chữ đã gõ (Xanh lá)
-        ctx.fillStyle = '#4ade80';
-        ctx.fillText(typedPart, enemy.x, enemy.y);
-
-        // Chữ chưa gõ (Trắng hoặc Vàng nếu đang ngắm)
-        let typedWidth = ctx.measureText(typedPart).width;
-        ctx.fillStyle = enemy === activeTarget ? '#facc15' : '#ffffff';
-        ctx.fillText(remainingPart, enemy.x + typedWidth, enemy.y);
-    }
-
-    // Vẽ đạn
-    ctx.fillStyle = '#f43f5e';
-    for (let b of bullets) {
-        ctx.beginPath();
-        ctx.arc(b.x, b.y, 4, 0, Math.PI * 2);
-        ctx.fill();
-    }
-}
-
-function gameLoop() {
-    update();
-    draw();
-    requestAnimationFrame(gameLoop);
-}
-
-setInterval(spawnEnemy, 2500);
-gameLoop();
-</script>
-</body>
-</html>
+// Xử lý g
