@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Game Bắn Từ Vựng - Typing Shooter</title>
+    <title>Game Bắn Từ Vựng & Câu - Typing Shooter</title>
     <style>
         * {
             box-sizing: border-box;
@@ -83,32 +83,35 @@
         #menuOverlay h1 {
             color: #38bdf8;
             margin: 0 0 5px 0;
-            font-size: 32px;
+            font-size: 30px;
             text-transform: uppercase;
             letter-spacing: 1px;
         }
 
         #menuOverlay p {
             color: #94a3b8;
-            margin: 0 0 25px 0;
+            margin: 0 0 20px 0;
         }
 
         .category-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
-            width: 90%;
-            max-width: 650px;
+            gap: 10px;
+            width: 95%;
+            max-width: 700px;
+            max-height: 420px;
+            overflow-y: auto;
+            padding-right: 5px;
         }
 
         .category-btn {
             background: #1e293b;
             color: #e2e8f0;
             border: 1px solid #475569;
-            padding: 14px;
+            padding: 12px;
             border-radius: 8px;
             cursor: pointer;
-            font-size: 15px;
+            font-size: 14px;
             font-weight: bold;
             transition: all 0.2s ease;
             text-align: center;
@@ -120,6 +123,18 @@
             border-color: #38bdf8;
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
+        }
+
+        .category-btn.sentence-btn {
+            grid-column: span 3;
+            background: #059669;
+            border-color: #34d399;
+            font-size: 16px;
+        }
+
+        .category-btn.sentence-btn:hover {
+            background: #10b981;
+            color: white;
         }
 
         .category-btn.all-btn {
@@ -139,14 +154,14 @@
 <div id="gameContainer">
     <div class="info">
         <div>Điểm: <span id="score" style="color: #4ade80; font-weight: bold;">0</span></div>
-        <div>Chủ đề: <span id="currentCategory" style="color: #fde047;">Tất cả</span></div>
+        <div>Chủ đề: <span id="currentCategory" style="color: #fde047;">Chưa chọn</span></div>
         <button id="changeCatBtn" onclick="showMenu()">Đổi chủ đề</button>
     </div>
 
     <!-- Màn hình chọn chủ đề -->
     <div id="menuOverlay">
-        <h1>Bắn Từ Vựng</h1>
-        <p>Chọn một chủ đề để bắt đầu luyện tập</p>
+        <h1>Bắn Từ Vựng & Cụm Câu</h1>
+        <p>Chọn một chủ đề hoặc chế độ luyện tập</p>
         <div class="category-grid" id="categoryGrid"></div>
     </div>
 
@@ -154,65 +169,128 @@
 </div>
 
 <script>
+// Danh sách câu mẫu do bạn cung cấp
+const sentenceList = [
+    { vi: "Xin chào, tôi tên là Long.", words: "name / is / Long / my / hello", ans: ["Hello, my name is Long."] },
+    { vi: "Rất vui được gặp bạn.", words: "meet / nice / to / you / is / it", ans: ["It is nice to meet you.", "Nice to meet you."] },
+    { vi: "Chào buổi sáng, mọi người.", words: "everyone / morning / good", ans: ["Good morning, everyone."] },
+    { vi: "Bạn khỏe không?", words: "are / how / you", ans: ["How are you?"] },
+    { vi: "Tôi khỏe, cảm ơn.", words: "fine / thanks / I / am", ans: ["I am fine, thanks.", "Fine, thanks."] },
+    { vi: "Tên bạn là gì?", words: "your / is / what / name", ans: ["What is your name?"] },
+    { vi: "Tôi đến từ Việt Nam.", words: "from / I / Vietnam / am", ans: ["I am from Vietnam."] },
+    { vi: "Bạn đến từ đâu?", words: "you / where / from / are", ans: ["Where are you from?"] },
+    { vi: "Tôi là một sinh viên.", words: "am / student / a / I", ans: ["I am a student."] },
+    { vi: "Tạm biệt, gặp lại bạn sau.", words: "you / see / later / goodbye", ans: ["Goodbye, see you later."] },
+    { vi: "Chúc một ngày tốt lành.", words: "a / have / day / nice", ans: ["Have a nice day."] },
+    { vi: "Bạn bao nhiêu tuổi?", words: "old / how / you / are", ans: ["How old are you?"] },
+    { vi: "Tôi 20 tuổi.", words: "twenty / am / old / years / I", ans: ["I am twenty years old."] },
+    { vi: "Đây là bạn của tôi, Nam.", words: "friend / is / my / Nam / this", ans: ["This is my friend, Nam."] },
+    { vi: "Rất hân hạnh được gặp bạn.", words: "pleased / meet / to / you / I / am", ans: ["I am pleased to meet you."] },
+    { vi: "Cảm ơn bạn rất nhiều.", words: "much / you / thank / so", ans: ["Thank you so much."] },
+    { vi: "Không có gì.", words: "welcome / are / you", ans: ["You are welcome."] },
+    { vi: "Xin lỗi, tôi đến trễ.", words: "late / sorry / I / for / am / being", ans: ["I am sorry for being late."] },
+    { vi: "Chúc ngủ ngon.", words: "night / good", ans: ["Good night."] },
+    { vi: "Bạn sống ở đâu?", words: "do / live / where / you", ans: ["Where do you live?"] },
+    { vi: "Tôi sống ở Hà Nội.", words: "live / Hanoi / in / I", ans: ["I live in Hanoi."] },
+    { vi: "Công việc của bạn là gì?", words: "your / is / job / what", ans: ["What is your job?"] },
+    { vi: "Tôi là một giáo viên.", words: "a / teacher / am / I", ans: ["I am a teacher."] },
+    { vi: "Hôm nay bạn thế nào?", words: "you / doing / are / how / today", ans: ["How are you doing today?"] },
+    { vi: "Tôi rất khỏe.", words: "doing / I / great / am", ans: ["I am doing great."] },
+    { vi: "Còn bạn thì sao?", words: "you / about / how", ans: ["How about you?"] },
+    { vi: "Rất vui được biết bạn.", words: "know / good / to / you", ans: ["Good to know you."] },
+    { vi: "Hẹn gặp lại bạn vào ngày mai.", words: "you / see / tomorrow", ans: ["See you tomorrow."] },
+    { vi: "Xin lỗi vì đã làm phiền bạn.", words: "sorry / bother / to / you", ans: ["Sorry to bother you."] },
+    { vi: "Hãy giữ liên lạc nhé.", words: "in / keep / touch", ans: ["Keep in touch."] },
+    { vi: "Số điện thoại của bạn là gì?", words: "phone / is / what / number / your", ans: ["What is your phone number?"] },
+    { vi: "Email của bạn là gì?", words: "your / what / email / is / address", ans: ["What is your email address?"] },
+    { vi: "Tôi có thể giúp gì cho bạn?", words: "help / I / can / how / you", ans: ["How can I help you?"] },
+    { vi: "Tôi không sao.", words: "okay / am / I", ans: ["I am okay."] },
+    { vi: "Chúc bạn may mắn.", words: "luck / good", ans: ["Good luck."] },
+    { vi: "Chào buổi chiều.", words: "afternoon / good", ans: ["Good afternoon."] },
+    { vi: "Chào buổi tối.", words: "evening / good", ans: ["Good evening."] },
+    { vi: "Rất lâu rồi không gặp.", words: "time / long / see / no", ans: ["Long time no see."] },
+    { vi: "Dạo này bạn thế nào?", words: "have / how / been / you", ans: ["How have you been?"] },
+    { vi: "Mọi thứ vẫn tốt.", words: "everything / good / is", ans: ["Everything is good."] },
+    { vi: "Không có gì mới cả.", words: "much / not", ans: ["Not much."] },
+    { vi: "Tôi phải đi bây giờ.", words: "go / have / now / I / to", ans: ["I have to go now."] },
+    { vi: "Bảo trọng nhé.", words: "care / take", ans: ["Take care."] },
+    { vi: "Chào mừng bạn đến Việt Nam.", words: "welcome / Vietnam / to", ans: ["Welcome to Vietnam."] },
+    { vi: "Tôi là người mới ở đây.", words: "here / new / am / I", ans: ["I am new here."] },
+    { vi: "Bạn có nói tiếng Anh không?", words: "speak / do / English / you", ans: ["Do you speak English?"] },
+    { vi: "Tôi nói một ít tiếng Anh.", words: "speak / English / I / a / little", ans: ["I speak a little English."] },
+    { vi: "Tôi là một kỹ sư.", words: "an / engineer / am / I", ans: ["I am an engineer."] },
+    { vi: "Bạn làm việc ở đâu?", words: "do / work / where / you", ans: ["Where do you work?"] },
+    { vi: "Tôi làm việc trong một công ty.", words: "work / a / I / company / in", ans: ["I work in a company."] },
+    { vi: "Sở thích của bạn là gì?", words: "your / is / hobby / what", ans: ["What is your hobby?"] },
+    { vi: "Tôi thích đọc sách.", words: "like / reading / I / books", ans: ["I like reading books."] },
+    { vi: "Tôi thích nghe nhạc.", words: "listening / like / to / music / I", ans: ["I like listening to music."] },
+    { vi: "Đây là họ của tôi.", words: "my / last / is / name / this", ans: ["This is my last name."] },
+    { vi: "Vui lòng gọi tôi là Alex.", words: "me / call / please / Alex", ans: ["Please call me Alex."] },
+    { vi: "Bạn có khỏe không?", words: "all / right / are / you", ans: ["Are you all right?"] },
+    { vi: "Tôi thấy tuyệt lắm.", words: "feel / I / great", ans: ["I feel great."] },
+    { vi: "Hôm nay trời đẹp quá.", words: "beautiful / a / day / it / is / today", ans: ["It is a beautiful day today.", "Today it is a beautiful day."] },
+    { vi: "Chúc bạn một cuối tuần vui vẻ.", words: "a / nice / have / weekend", ans: ["Have a nice weekend."] },
+    { vi: "Cảm ơn vì sự giúp đỡ của bạn.", words: "your / for / thanks / help", ans: ["Thanks for your help."] },
+    { vi: "Đừng lo lắng.", words: "worry / do / not", ans: ["Do not worry."] },
+    { vi: "Không vấn đề gì.", words: "problem / no", ans: ["No problem."] },
+    { vi: "Tôi xin lỗi.", words: "so / am / I / sorry", ans: ["I am so sorry."] },
+    { vi: "Tôi hiểu rồi.", words: "understand / I", ans: ["I understand."] },
+    { vi: "Tôi không hiểu.", words: "do / understand / I / not", ans: ["I do not understand."] },
+    { vi: "Bạn có thể nhắc lại không?", words: "repeat / can / that / you", ans: ["Can you repeat that?"] },
+    { vi: "Xin vui lòng nói chậm lại.", words: "slowly / speak / please", ans: ["Please speak slowly."] },
+    { vi: "Tên bạn đánh vần thế nào?", words: "spell / do / how / you / your / name", ans: ["How do you spell your name?"] },
+    { vi: "Tôi rất vui được ở đây.", words: "happy / am / to / be / here / I", ans: ["I am happy to be here."] },
+    { vi: "Đây là lần đầu tiên của tôi ở đây.", words: "my / first / is / time / here / this", ans: ["This is my first time here."] },
+    { vi: "Bạn thấy thành phố này thế nào?", words: "do / like / how / this / you / city", ans: ["How do you like this city?"] },
+    { vi: "Tôi yêu nơi này.", words: "place / love / I / this", ans: ["I love this place."] },
+    { vi: "Bạn đã kết hôn chưa?", words: "married / are / you", ans: ["Are you married?"] },
+    { vi: "Tôi vẫn còn độc thân.", words: "single / am / I", ans: ["I am single."] },
+    { vi: "Tôi đã có gia đình.", words: "married / am / I", ans: ["I am married."] },
+    { vi: "Bạn có con chưa?", words: "do / have / children / you / any", ans: ["Do you have any children?"] },
+    { vi: "Tôi có hai con.", words: "have / two / children / I", ans: ["I have two children."] },
+    { vi: "Gia đình bạn thế nào?", words: "your / family / how / is", ans: ["How is your family?"] },
+    { vi: "Họ vẫn khỏe.", words: "are / fine / they", ans: ["They are fine."] },
+    { vi: "Anh trai tôi tên là Minh.", words: "my / brother's / Minh / name / is", ans: ["My brother's name is Minh."] },
+    { vi: "Chị gái tôi 25 tuổi.", words: "sister / my / 25 / is / old / years", ans: ["My sister is 25 years old."] },
+    { vi: "Mẹ tôi là một bác sĩ.", words: "my / mother / doctor / a / is", ans: ["My mother is a doctor."] },
+    { vi: "Bố tôi là một tài xế.", words: "father / driver / a / my / is", ans: ["My father is a driver."] },
+    { vi: "Tôi là con một.", words: "am / an / child / I / only", ans: ["I am an only child."] },
+    { vi: "Rất vui được làm quen với bạn.", words: "a / pleasure / it / to / meet / you / is", ans: ["It is a pleasure to meet you."] },
+    { vi: "Cho phép tôi tự giới thiệu.", words: "myself / let / introduce / me", ans: ["Let me introduce myself."] },
+    { vi: "Tôi muốn giới thiệu bạn tôi.", words: "like / introduce / my / friend / I / to / would", ans: ["I would like to introduce my friend."] },
+    { vi: "Bạn tên là gì vậy?", words: "may / I / your / name / have", ans: ["May I have your name?"] },
+    { vi: "Cứ gọi tôi là Tom.", words: "just / Tom / me / call", ans: ["Just call me Tom."] },
+    { vi: "Chúng ta đã gặp nhau chưa?", words: "met / have / before / we", ans: ["Have we met before?"] },
+    { vi: "Tôi nghĩ chúng ta đã từng gặp nhau.", words: "think / we / have / met / I", ans: ["I think we have met."] },
+    { vi: "Rất vui vì đã gặp bạn.", words: "meeting / nice / you", ans: ["Nice meeting you."] },
+    { vi: "Chúc bạn chuyến đi vui vẻ.", words: "a / safe / trip / have", ans: ["Have a safe trip."] },
+    { vi: "Hẹn gặp lại bạn sớm.", words: "you / soon / see", ans: ["See you soon."] },
+    { vi: "Tôi hy vọng gặp lại bạn.", words: "hope / to / see / you / again / I", ans: ["I hope to see you again."] },
+    { vi: "Gửi lời chào của tôi đến gia đình bạn nhé.", words: "say / hello / to / your / family", ans: ["Say hello to your family."] },
+    { vi: "Chúc bạn một ngày tuyệt vời.", words: "a / great / have / day", ans: ["Have a great day."] },
+    { vi: "Chúc mừng sinh nhật.", words: "happy / birthday", ans: ["Happy birthday."] },
+    { vi: "Cảm ơn bạn vì đã đến.", words: "coming / thank / for / you", ans: ["Thank you for coming."] },
+    { vi: "Chào tạm biệt nhé.", words: "bye / for / now", ans: ["Bye for now."] }
+];
+
 const vocabularyCategories = {
     'Thực phẩm': [
         { en: 'apple', vi: 'Quả táo' }, { en: 'banana', vi: 'Quả chuối' }, { en: 'water', vi: 'Nước' },
-        { en: 'food', vi: 'Thức ăn' }, { en: 'bread', vi: 'Bánh mì' }, { en: 'rice', vi: 'Cơm / Gạo' },
-        { en: 'milk', vi: 'Sữa' }, { en: 'tea', vi: 'Trà' }, { en: 'coffee', vi: 'Cà phê' },
-        { en: 'meat', vi: 'Thịt' }, { en: 'fish', vi: 'Cá' }, { en: 'chicken', vi: 'Thịt gà' },
-        { en: 'egg', vi: 'Quả trứng' }, { en: 'sugar', vi: 'Đường' }, { en: 'salt', vi: 'Muối' },
-        { en: 'fruit', vi: 'Trái cây' }, { en: 'vegetable', vi: 'Rau củ' }, { en: 'soup', vi: 'Canh / Súp' },
-        { en: 'juice', vi: 'Nước ép' }, { en: 'cake', vi: 'Bánh ngọt' }
+        { en: 'food', vi: 'Thức ăn' }, { en: 'bread', vi: 'Bánh mì' }, { en: 'rice', vi: 'Cơm / Gạo' }
     ],
     'Công nghệ': [
         { en: 'computer', vi: 'Máy tính' }, { en: 'keyboard', vi: 'Bàn phím' }, { en: 'mouse', vi: 'Con chuột' },
-        { en: 'screen', vi: 'Màn hình' }, { en: 'phone', vi: 'Điện thoại' }, { en: 'laptop', vi: 'Laptop' },
-        { en: 'internet', vi: 'Mạng internet' }, { en: 'website', vi: 'Trang web' }, { en: 'software', vi: 'Phần mềm' },
-        { en: 'hardware', vi: 'Phần cứng' }, { en: 'network', vi: 'Mạng lưới' }, { en: 'data', vi: 'Dữ liệu' },
-        { en: 'coding', vi: 'Lập trình' }, { en: 'system', vi: 'Hệ thống' }, { en: 'device', vi: 'Thiết bị' },
-        { en: 'camera', vi: 'Máy ảnh' }, { en: 'file', vi: 'Tập tin' }, { en: 'folder', vi: 'Thư mục' },
-        { en: 'message', vi: 'Tin nhắn' }, { en: 'email', vi: 'Thư điện tử' }
+        { en: 'screen', vi: 'Màn hình' }, { en: 'phone', vi: 'Điện thoại' }, { en: 'laptop', vi: 'Laptop' }
     ],
     'Gia đình & Con người': [
         { en: 'family', vi: 'Gia đình' }, { en: 'father', vi: 'Bố / Cha' }, { en: 'mother', vi: 'Mẹ' },
-        { en: 'brother', vi: 'Anh / Em trai' }, { en: 'sister', vi: 'Chị / Em gái' }, { en: 'child', vi: 'Đứa trẻ' },
-        { en: 'children', vi: 'Trẻ em' }, { en: 'parent', vi: 'Phụ huynh' }, { en: 'friend', vi: 'Bạn bè' },
-        { en: 'person', vi: 'Con người' }, { en: 'people', vi: 'Mọi người' }, { en: 'man', vi: 'Đàn ông' },
-        { en: 'woman', vi: 'Phụ nữ' }, { en: 'boy', vi: 'Cậu bé' }, { en: 'girl', vi: 'Cô gái' },
-        { en: 'baby', vi: 'Trẻ sơ sinh' }, { en: 'student', vi: 'Học sinh' }, { en: 'teacher', vi: 'Giáo viên' },
-        { en: 'doctor', vi: 'Bác sĩ' }, { en: 'worker', vi: 'Người lao động' }
-    ],
-    'Thời gian & Vũ trụ': [
-        { en: 'time', vi: 'Thời gian' }, { en: 'today', vi: 'Hôm nay' }, { en: 'yesterday', vi: 'Hôm qua' },
-        { en: 'tomorrow', vi: 'Ngày mai' }, { en: 'morning', vi: 'Buổi sáng' }, { en: 'afternoon', vi: 'Buổi chiều' },
-        { en: 'evening', vi: 'Buổi tối' }, { en: 'night', vi: 'Ban đêm' }, { en: 'week', vi: 'Tuần' },
-        { en: 'month', vi: 'Tháng' }, { en: 'year', vi: 'Năm' }, { en: 'future', vi: 'Tương lai' },
-        { en: 'past', vi: 'Quá khứ' }, { en: 'present', vi: 'Hiện tại' }, { en: 'sun', vi: 'Mặt trời' },
-        { en: 'moon', vi: 'Mặt trăng' }, { en: 'star', vi: 'Ngôi sao' }, { en: 'galaxy', vi: 'Thiên hà' },
-        { en: 'space', vi: 'Vũ trụ' }, { en: 'earth', vi: 'Trái đất' }
-    ],
-    'Đồ vật & Nhà cửa': [
-        { en: 'house', vi: 'Ngôi nhà' }, { en: 'room', vi: 'Căn phòng' }, { en: 'door', vi: 'Cửa ra vào' },
-        { en: 'window', vi: 'Cửa sổ' }, { en: 'table', vi: 'Cái bàn' }, { en: 'chair', vi: 'Cái ghế' },
-        { en: 'bed', vi: 'Cái giường' }, { en: 'book', vi: 'Quyển sách' }, { en: 'pen', vi: 'Cây bút' },
-        { en: 'paper', vi: 'Tờ giấy' }, { en: 'bag', vi: 'Túi xách' }, { en: 'clothes', vi: 'Quần áo' },
-        { en: 'shoes', vi: 'Giày' }, { en: 'clock', vi: 'Đồng hồ' }, { en: 'money', vi: 'Tiền' },
-        { en: 'car', vi: 'Xe hơi' }, { en: 'bicycle', vi: 'Xe đạp' }, { en: 'bus', vi: 'Xe buýt' },
-        { en: 'train', vi: 'Tàu hỏa' }, { en: 'airplane', vi: 'Máy bay' }
-    ],
-    'Động từ thông dụng': [
-        { en: 'have', vi: 'Có' }, { en: 'do', vi: 'Làm' }, { en: 'say', vi: 'Nói' }, { en: 'go', vi: 'Đi' },
-        { en: 'get', vi: 'Nhận được' }, { en: 'make', vi: 'Tạo ra' }, { en: 'know', vi: 'Biết' },
-        { en: 'think', vi: 'Nghĩ' }, { en: 'take', vi: 'Cầm / Lấy' }, { en: 'see', vi: 'Nhìn thấy' },
-        { en: 'come', vi: 'Đến' }, { en: 'want', vi: 'Muốn' }, { en: 'look', vi: 'Nhìn' },
-        { en: 'use', vi: 'Sử dụng' }, { en: 'find', vi: 'Tìm kiếm' }, { en: 'give', vi: 'Cho / Tặng' },
-        { en: 'tell', vi: 'Kể / Nói' }, { en: 'work', vi: 'Làm việc' }, { en: 'call', vi: 'Gọi' },
-        { en: 'play', vi: 'Chơi' }
+        { en: 'brother', vi: 'Anh / Em trai' }, { en: 'sister', vi: 'Chị / Em gái' }
     ]
 };
 
 let canvas, ctx, scoreEl, categoryEl, menuOverlay, categoryGrid;
 let activeWordList = [];
+let isSentenceMode = false;
 let score = 0;
 let enemies = [];
 let bullets = [];
@@ -237,19 +315,26 @@ document.addEventListener('DOMContentLoaded', () => {
 function initMenu() {
     categoryGrid.innerHTML = '';
     
-    // Nút chọn tất cả chủ đề
+    // Nút Luyện Tập Đoạn Câu Tiếng Anh (Chế độ mới)
+    const sentenceBtn = document.createElement('button');
+    sentenceBtn.className = 'category-btn sentence-btn';
+    sentenceBtn.innerText = '💬 Luyện Tập Gõ Đoạn/Câu Tiếng Anh (Tốc độ chậm)';
+    sentenceBtn.onclick = () => startGame('Đoạn Câu Giao Tiếp', true);
+    categoryGrid.appendChild(sentenceBtn);
+
+    // Nút chọn tất cả từ vựng
     const allBtn = document.createElement('button');
     allBtn.className = 'category-btn all-btn';
-    allBtn.innerText = '🌟 Tất cả chủ đề';
-    allBtn.onclick = () => startGame('Tất cả');
+    allBtn.innerText = '🌟 Tất cả từ vựng';
+    allBtn.onclick = () => startGame('Tất cả từ vựng', false);
     categoryGrid.appendChild(allBtn);
 
-    // Tạo nút cho từng chủ đề
+    // Tạo nút cho từng chủ đề từ vựng
     Object.keys(vocabularyCategories).forEach(catName => {
         const btn = document.createElement('button');
         btn.className = 'category-btn';
-        btn.innerText = catName;
-        btn.onclick = () => startGame(catName);
+        btn.innerText = 'Từ vựng: ' + catName;
+        btn.onclick = () => startGame(catName, false);
         categoryGrid.appendChild(btn);
     });
 }
@@ -263,10 +348,17 @@ function showMenu() {
     menuOverlay.style.display = 'flex';
 }
 
-function startGame(category) {
+function startGame(category, isSentence = false) {
     categoryEl.innerText = category;
+    isSentenceMode = isSentence;
     
-    if (category === 'Tất cả') {
+    if (isSentenceMode) {
+        // Chuẩn hóa dữ liệu câu để game xử lý như từ vựng
+        activeWordList = sentenceList.map(item => ({
+            en: item.ans[0],       // Câu hoàn chỉnh tiếng Anh
+            vi: `${item.vi} [Gợi ý: ${item.words}]` // Nghĩa + các từ gợi ý
+        }));
+    } else if (category === 'Tất cả từ vựng') {
         activeWordList = Object.values(vocabularyCategories).flat();
     } else {
         activeWordList = vocabularyCategories[category];
@@ -282,21 +374,27 @@ function startGame(category) {
     gameRunning = true;
     
     clearInterval(spawnInterval);
-    spawnInterval = setInterval(spawnEnemy, 2500);
+    // Nếu là chế độ câu: Giảm tần suất xuất hiện câu xuống 7000ms (7 giây/câu)
+    const spawnTime = isSentenceMode ? 7000 : 2500;
+    spawnInterval = setInterval(spawnEnemy, spawnTime);
 }
 
 function spawnEnemy() {
     if (!gameRunning || activeWordList.length === 0) return;
 
     const wordObj = activeWordList[Math.floor(Math.random() * activeWordList.length)];
-    const x = Math.random() * (canvas.width - 200) + 50;
+    const x = Math.random() * (canvas.width - 350) + 30;
+
+    // Tốc độ di chuyển: Nếu gõ câu thì cho rơi cực chậm (0.15 - 0.25)
+    const speed = isSentenceMode ? (0.15 + Math.random() * 0.1) : (0.8 + Math.random() * 0.5);
+
     enemies.push({
         text: wordObj.en,
         meaning: wordObj.vi,
         typedIndex: 0,
         x: x,
         y: 0,
-        speed: 0.8 + Math.random() * 0.5
+        speed: speed
     });
 }
 
@@ -306,32 +404,41 @@ function fireBullet(targetX, targetY) {
         y: gun.y,
         targetX: targetX,
         targetY: targetY,
-        speed: 14
+        speed: 16
     });
 }
 
 window.addEventListener('keydown', (e) => {
     if (!gameRunning) return;
 
-    const key = e.key.toLowerCase();
-    if (key.length !== 1 || key < 'a' || key > 'z') return;
+    // Lấy ký tự nhập (cho phép gõ cả chữ cái, dấu cách ' ', dấu phẩy, hỏi chấm,...)
+    const key = e.key;
+    if (key.length !== 1) return; // Bỏ qua phím Shift, Enter, Backspace,...
 
+    const keyLower = key.toLowerCase();
+
+    // Tìm mục tiêu nếu chưa chọn
     if (!activeTarget) {
         for (let enemy of enemies) {
-            if (enemy.text[0] === key) {
+            if (enemy.text[0].toLowerCase() === keyLower) {
                 activeTarget = enemy;
                 break;
             }
         }
     }
 
+    // Kiểm tra gõ đúng phím tiếp theo
     if (activeTarget) {
-        if (activeTarget.text[activeTarget.typedIndex] === key) {
+        const expectedChar = activeTarget.text[activeTarget.typedIndex];
+        
+        // So sánh không phân biệt hoa thường để dễ gõ hơn
+        if (expectedChar && expectedChar.toLowerCase() === keyLower) {
             activeTarget.typedIndex++;
-            fireBullet(activeTarget.x + activeTarget.typedIndex * 12, activeTarget.y);
+            fireBullet(activeTarget.x + activeTarget.typedIndex * 8, activeTarget.y);
 
+            // Gõ xong toàn bộ từ/câu
             if (activeTarget.typedIndex === activeTarget.text.length) {
-                score += 10;
+                score += isSentenceMode ? 30 : 10;
                 scoreEl.innerText = score;
                 enemies = enemies.filter(e => e !== activeTarget);
                 activeTarget = null;
@@ -343,6 +450,7 @@ window.addEventListener('keydown', (e) => {
 function update() {
     if (!gameRunning) return;
 
+    // Cập nhật vị trí câu/từ rơi xuống
     for (let enemy of enemies) {
         enemy.y += enemy.speed;
         if (enemy.y > canvas.height - 40) {
@@ -351,6 +459,7 @@ function update() {
         }
     }
 
+    // Cập nhật vị trí đạn bắn
     for (let i = bullets.length - 1; i >= 0; i--) {
         let b = bullets[i];
         let dx = b.targetX - b.x;
@@ -371,28 +480,35 @@ function draw() {
 
     if (!gameRunning) return;
 
+    // Vẽ pháo / súng
     ctx.fillStyle = '#38bdf8';
     ctx.beginPath();
     ctx.arc(gun.x, gun.y, 20, 0, Math.PI * 2);
     ctx.fill();
 
+    // Vẽ các đoạn câu / từ vựng rơi xuống
     for (let enemy of enemies) {
-        ctx.font = '14px Arial';
+        // 1. Dòng nghĩa tiếng Việt & Gợi ý từ
+        ctx.font = isSentenceMode ? '13px Arial' : '14px Arial';
         ctx.fillStyle = enemy === activeTarget ? '#fde047' : '#94a3b8';
-        ctx.fillText(`(${enemy.meaning})`, enemy.x, enemy.y - 22);
+        ctx.fillText(`(${enemy.meaning})`, enemy.x, enemy.y - 18);
 
-        ctx.font = '22px Courier New';
+        // 2. Dòng câu tiếng Anh cần gõ
+        ctx.font = isSentenceMode ? '16px Courier New' : '22px Courier New';
         let typedPart = enemy.text.substring(0, enemy.typedIndex);
         let remainingPart = enemy.text.substring(enemy.typedIndex);
 
+        // Phần chữ đã gõ đúng (Màu xanh lá)
         ctx.fillStyle = '#4ade80';
         ctx.fillText(typedPart, enemy.x, enemy.y);
 
+        // Phần chữ còn lại chưa gõ (Màu vàng nếu đang chọn, màu trắng nếu chưa chọn)
         let typedWidth = ctx.measureText(typedPart).width;
         ctx.fillStyle = enemy === activeTarget ? '#facc15' : '#ffffff';
         ctx.fillText(remainingPart, enemy.x + typedWidth, enemy.y);
     }
 
+    // Vẽ đạn
     ctx.fillStyle = '#f43f5e';
     for (let b of bullets) {
         ctx.beginPath();
