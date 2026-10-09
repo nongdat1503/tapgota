@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Học Tiếng Anh Thực Chiến - Typing Shooter</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="gameContainer">
+    <div class="info">
+        <div>Điểm: <span id="score">0</span></div>
+        <div>Chủ đề: <span id="currentCategory">Chưa chọn</span></div>
+        <button id="changeCatBtn" onclick="showMenu()">Đổi chủ đề</button>
+    </div>
+
+    <!-- Màn hình chính -->
+    <div id="menuOverlay" class="overlay">
+        <h1>Bắn Từ Vựng & Cụm Câu (Gợi Ý Xáo Trộn)</h1>
+        <p>Nhìn Tiếng Việt ---- Dựa vào gợi ý xáo trộn ---- Gõ Tiếng Anh chuẩn xác!</p>
+        <div class="category-grid" id="categoryGrid"></div>
+    </div>
+
+    <!-- Màn hình Chọn Chủ Đề Học Từ Mới -->
+    <div id="selectCategoryOverlay" class="overlay">
+        <button class="close-btn" onclick="showMenu()">❌ Quay Lại</button>
+        <h1>Chọn Chủ Đề Muốn Học</h1>
+        <p>Chọn một chủ đề bên dưới để xem từ vựng, phiên âm và nghe phát âm trước khi chơi!</p>
+        <div class="category-grid" id="selectCategoryGrid"></div>
+    </div>
+
+    <!-- Màn hình Flashcard Học Từ Mới -->
+    <div id="learnOverlay" class="overlay">
+        <button class="close-btn" onclick="showSelectCategoryScreen()">❌ Đổi Chủ Đề Học</button>
+        <h1 id="learnTitle">Từ Vựng Chủ Đề</h1>
+        <p>Luyện tập ghi nhớ và nghe phát âm trước khi vào game chiến đấu nhé!</p>
+        <div class="word-cards-container" id="wordCardsContainer"></div>
+        <button class="start-play-btn" onclick="startLearnedCategoryGame()">🚀 Bắt Đầu Chiến Đấu Chủ Đề Này!</button>
+    </div>
+
+    <!-- Màn hình Chọn Thì Để Học Lý Thuyết -->
+    <div id="selectTenseOverlay" class="overlay">
+        <button class="close-btn" onclick="showMenu()">❌ Quay Lại Menu</button>
+        <h1>Danh Sách Các Thì Tiếng Anh</h1>
+        <p>Chọn một thì để học công thức, cách dùng và làm bài tập thực hành!</p>
+        <div class="category-grid" id="tenseGrid"></div>
+    </div>
+
+    <!-- Màn hình Chi Tiết Lý Thuyết & Bài Tập -->
+    <div id="tenseDetailOverlay" class="overlay">
+        <button class="close-btn" onclick="showSelectTenseScreen()">❌ Chọn Thì Khác</button>
+        <h1 id="tenseTitle">Tên Thì</h1>
+        
+        <div class="grammar-content">
+            <!-- Lý thuyết -->
+            <div class="theory-box">
+                <h3>📘 Lý Thuyết & Công Thức</h3>
+                <p id="tenseConcept"></p>
+                <div class="formula-box" id="tenseFormula"></div>
+                <p><b>Dấu hiệu nhận biết:</b> <span id="tenseSignals"></span></p>
+            </div>
+
+            <!-- Bài tập -->
+            <div class="exercise-box">
+                <h3>✏️ Bài Tập Thực Hành</h3>
+                <div id="exerciseList"></div>
+            </div>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/script.js"></script>
+</body>
+</html>
