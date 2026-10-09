@@ -162,6 +162,26 @@
         /* Màn hình học từ mới */
         #learnOverlay {
             display: none;
+            position: absolute;
+        }
+
+        /* Nút thoát ở màn hình học từ mới */
+        .close-learn-btn {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        .close-learn-btn:hover {
+            background: #dc2626;
         }
 
         .word-cards-container {
@@ -257,6 +277,7 @@
 
     <!-- Màn hình Học từ mới hôm nay -->
     <div id="learnOverlay" class="overlay">
+        <button class="close-learn-btn" onclick="showMenu()">❌ Quay Lại</button>
         <h1 id="learnTitle">10 Từ Vựng Ngày Hôm Nay</h1>
         <p>Hãy cùng ghi nhớ và luyện phát âm trước khi tham gia thử thách nhé!</p>
         <div class="word-cards-container" id="wordCardsContainer"></div>
@@ -295,7 +316,7 @@ const fullVocabularyList = [
     { en: 'programmer', type: 'n', ipa: '/ˈproʊ.ɡræm.ɚ/', vi: 'lập trình viên', cat: 'Nghề nghiệp' }
 ];
 
-// Danh sách câu mẫu hỗ trợ nhiều CÂU ĐỒNG NGHĨA (ans là mảng các câu chấp nhận được)
+// Danh sách câu mẫu hỗ trợ nhiều CÂU ĐỒNG NGHĨA
 const sentenceList = [
     { vi: "Xin chào, tôi tên là Long.", ans: ["Hello, my name is Long.", "Hi, my name is Long.", "Hello, I am Long."] },
     { vi: "Rất vui được gặp bạn.", ans: ["Nice to meet you.", "It is nice to meet you.", "Pleased to meet you."] },
@@ -461,7 +482,7 @@ function startGame(category, isSentence = false, isPreloaded = false) {
     if (!isPreloaded) {
         if (isSentenceMode) {
             activeWordList = sentenceList.map(item => ({ 
-                validAnswers: item.ans, // Chứa danh sách tất cả các câu đồng nghĩa
+                validAnswers: item.ans,
                 vi: item.vi 
             }));
         } else if (category === 'Tất cả từ vựng') {
@@ -496,16 +517,15 @@ function spawnEnemy() {
     const x = Math.random() * (canvas.width - 380) + 40;
     const speed = isSentenceMode ? 0.12 : 0.4;
     
-    // Chọn 1 câu mặc định làm câu hiển thị tham chiếu
     const primaryText = wordObj.validAnswers[0];
     const hintText = generateScrambledHint(primaryText, isSentenceMode);
 
     enemies.push({
-        validAnswers: wordObj.validAnswers, // Mảng các câu đồng nghĩa
-        currentMatchedAns: null,            // Câu đồng nghĩa đang gõ khớp
+        validAnswers: wordObj.validAnswers,
+        currentMatchedAns: null,
         meaning: wordObj.vi,
         hint: hintText,
-        userTyped: "",                       // Ký tự người chơi đã gõ (đã lọc bỏ dấu)
+        userTyped: "",
         x: x,
         y: 30,
         speed: speed,
@@ -523,7 +543,6 @@ function fireBullet(targetX, targetY) {
     });
 }
 
-// Bỏ qua tất cả dấu chấm câu, chỉ giữ chữ và số để so sánh
 function cleanChar(char) {
     return char.toLowerCase().replace(/[^a-z0-9]/g, '');
 }
@@ -532,14 +551,11 @@ window.addEventListener('keydown', (e) => {
     if (!gameRunning) return;
 
     const key = e.key;
-    // Bỏ qua các phím chức năng (Enter, Shift, Backspace, v.v.)
     if (key.length !== 1) return;
 
     const cleanedKey = cleanChar(key);
-    // Nếu người dùng gõ phím dấu (ví dụ: ., ?!), hệ thống bỏ qua không tính gõ sai
     if (!cleanedKey) return;
 
-    // 1. Nếu chưa có mục tiêu, tìm kẻ địch có câu phù hợp với phím vừa gõ
     if (!activeTarget) {
         for (let enemy of enemies) {
             for (let ans of enemy.validAnswers) {
@@ -554,12 +570,10 @@ window.addEventListener('keydown', (e) => {
         }
     }
 
-    // 2. Xử lý khi đã có mục tiêu
     if (activeTarget) {
         let possibleAnswers = activeTarget.validAnswers;
         let testTyped = activeTarget.userTyped + cleanedKey;
         
-        // Kiểm tra xem chuỗi mới gõ có khớp tiền tố của bất kỳ câu đồng nghĩa nào không
         let matchingAns = possibleAnswers.find(ans => {
             let cleanAns = ans.split('').map(cleanChar).join('');
             return cleanAns.startsWith(testTyped);
@@ -573,7 +587,6 @@ window.addEventListener('keydown', (e) => {
 
             let cleanAns = matchingAns.split('').map(cleanChar).join('');
             
-            // Đã gõ hoàn thành trọn vẹn 1 câu!
             if (activeTarget.userTyped === cleanAns) {
                 score += isSentenceMode ? 30 : 10;
                 scoreEl.innerText = score;
@@ -584,7 +597,6 @@ window.addEventListener('keydown', (e) => {
                 activeTarget = null;
             }
         } else {
-            // Gõ sai phím ký tự -> Nháy đỏ báo hiệu
             activeTarget.wrongFlash = 10;
         }
     }
@@ -644,14 +656,13 @@ function draw() {
         ctx.fillStyle = '#94a3b8';
         ctx.fillText(`[Gợi ý: ${enemy.hint}]`, enemy.x, enemy.y - 6);
 
-        // 3. Chuỗi Tiếng Anh: Hiển thị chữ đã gõ & vị trí chữ ẩn
+        // 3. Chuỗi Tiếng Anh
         ctx.font = 'bold 18px Courier New';
         
         let typedCount = enemy.userTyped.length;
         let charIndex = 0;
         let cleanFound = 0;
 
-        // Tìm vị trí cắt trong câu gốc sao cho khớp số ký tự đã gõ (bỏ qua dấu)
         while (charIndex < targetText.length && cleanFound < typedCount) {
             if (cleanChar(targetText[charIndex]) !== '') {
                 cleanFound++;
@@ -662,11 +673,9 @@ function draw() {
         let typedDisplay = targetText.substring(0, charIndex);
         let remainingText = targetText.substring(charIndex);
 
-        // Phần chữ đã gõ đúng (màu xanh lá)
         ctx.fillStyle = '#4ade80';
         ctx.fillText(typedDisplay, enemy.x, enemy.y + 16);
 
-        // Phần chữ chưa gõ (chuyển thành nét gạch chân/dấu cách)
         let typedWidth = ctx.measureText(typedDisplay).width;
         let hiddenPlaceholder = remainingText.replace(/[a-zA-Z0-9]/g, '_');
 
